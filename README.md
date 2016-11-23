@@ -1,6 +1,6 @@
-# PracticalMachineLearning
+# Practical Machine Learning
 
-This details the Prediction for the Machine learning exercise
+This repository details the analysis done to come up with a Prediction model for the dataset on human activity.
 
 For some reason viewing the HTML file here in github is a bit difficult.
 In which case the HTML version can be viewed here.

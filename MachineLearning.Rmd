@@ -1,0 +1,142 @@
+---
+title: "Practical Machine Learning: Coursera Project"
+author: "Olson Jodl Ignacio Gayatin"
+date: "21 October 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, cache=TRUE, message=FALSE, tidy=TRUE)
+```
+## Executive Summary
+
+We are asked to classify a specific set of activity variables to determine `classe` as the outcome. Two predictive models (recursive partitioning and random forest) were used to predict the outcome based on the identified predictors. The random forest yielded a higher accuracy result of 98.8%  (or an error of 1.2%) and was used to predict the outcome of the test data.
+
+## Background
+
+Devices such as Jawbone Up, Nike FuelBand, and Fitbit now allows the inexpensive collection of a large amount of data on one's personal activity. The dataset provided quantifies how 6 participants perform an activity through inputs from accelerometers on the belt, forearm, arm, and dumbell. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. Two datasets have been provided : training and test. The goal of this project is to predict the manner of which the exercise was conducted as indicated in the `classe` variable. The test set will be used to validate the prediction derived from the training set. The model will be chosen based on its accuracy and will be used to predict 20 different test cases. 
+
+## Data Processing
+
+### Loading the relevant packages
+
+We first call the relevant packages to be used for the analysis
+```{r}
+library(caret)
+library(dplyr)
+library(rpart)
+library(randomForest)
+```
+
+### Loading the dataset
+We read the csv files that were downloaded
+[Training Dataset](https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv)
+and  [Test Dataset](https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv)
+
+```{r}
+setwd("~/Documents/R Programming/Data Sources")
+data_training <- read.csv("pml-training.csv",header=TRUE,na.strings=c("NA",""))
+data_test <- read.csv("pml-testing.csv",header=TRUE, na.strings=c("NA",""))
+```
+
+We remove columns that are blank or have NA values.
+We also remove the columns that are non-predictor variables ( variables such as `user_name` and timestamps).
+This leaves 52 variables for predictor and 1 variable for the outcome. 
+
+```{r}
+data_training_short <- data_training[, (colSums(is.na(data_training)) == 0)]
+data_test_short <- data_test[, (colSums(is.na(data_test)) == 0)]
+data_training_short2 <- select(data_training_short, roll_belt:classe)[,]
+data_test_short2 <- select(data_test_short, roll_belt:problem_id)[,]
+```
+
+### Subsetting the data
+
+Our training set has 19622 rows which is significantly large. We split the data into 2 subsets for faster turnaround time of the machine.
+
+```{r}
+set.seed(1007)
+ids_train = createDataPartition(y=data_training_short2$classe, p=0.50, list = FALSE)
+train_dataset1 = data_training_short2[ids_train,]
+train_dataset2 = data_training_short2[-ids_train,]
+```
+
+From each of the subset we split further into training set using 80% of the data and validation set using the remaining 20%.
+
+```{r}
+set.seed(1007)
+ids_train1 <- createDataPartition(y = train_dataset1$classe, p=0.80, list=FALSE)
+dataset1_training <-train_dataset1[ids_train1,]
+dataset1_validation <- train_dataset1[-ids_train1,]
+
+set.seed(1007)
+ids_train2 <- createDataPartition(y = train_dataset2$classe, p=0.80, list=FALSE)
+dataset2_training <- train_dataset2[ids_train2,]
+dataset2_validation <- train_dataset2[-ids_train2,]
+```
+
+### Predicting the outcome
+
+We evaluate the outcome using two methods: Recursive Partition and Random Forest. Since the outcome is a discrete type of variable (i.e. A,B,C,D or E), we presume that pre-processing of the predictor variable will not have a significant impact, so we evaluate the data as is. There will be four accuracy values to be derived : two predictive models for two subsets. Sample code used for set 1 is shown.
+```{r}
+set.seed(1007)
+control <- trainControl(method = "cv", number = 5)
+fit_rpart <- train(classe ~ ., data = dataset1_training, method = "rpart", trControl =control)
+predict_rpart <- predict(fit_rpart, dataset1_validation)
+conf_rpart <- confusionMatrix(dataset1_validation$classe, predict_rpart)
+
+set.seed(1007)
+fit_rf <- train(classe ~ ., data = dataset1_training, method = "rf", trControl = control)
+predict_rf <- predict(fit_rf, dataset1_validation)
+conf_rf <- confusionMatrix(dataset1_validation$classe, predict_rf)
+
+conf_rpart$table
+conf_rpart$overall[1]
+conf_rf$table
+conf_rf$overall[1]
+
+```
+
+```{r }
+set.seed(1007)
+control <- trainControl(method = "cv", number = 5)
+fit_rpart2 <- train(classe ~ ., data = dataset2_training, method = "rpart", trControl =control)
+predict_rpart2 <- predict(fit_rpart2, dataset2_validation)
+conf_rpart2 <- confusionMatrix(dataset2_validation$classe, predict_rpart2)
+
+set.seed(1007)
+fit_rf2 <- train(classe ~ ., data = dataset2_training, method = "rf", trControl = control)
+predict_rf2 <- predict(fit_rf2, dataset2_validation)
+conf_rf2 <- confusionMatrix(dataset2_validation$classe, predict_rf2)
+
+conf_rpart2$table
+conf_rf2$table
+```
+
+## Results
+
+Based on the results we see that the Random Forest method yields a better accuracy, 98.8% or an error of 1.2%.
+```{r}
+conf_rpart$overall[1]
+conf_rpart2$overall[1]
+conf_rf$overall[1]
+conf_rf2$overall[1]
+```
+
+We therefore use the **Random Forest** model to predict our dataset
+```{r}
+predictionTest <- predict(fit_rf,data_test_short2)
+print(predictionTest)
+```
+
+The prediction gave 20/20 correct answers.
+
+## References
+
+Additional information on the data can be derived here
+
+1. [Dataset Information](http://groupware.les.inf.puc-rio.br/har)
+2. [Training Dataset](https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv)
+3. [Test Dataset](https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv)
+
+For queries you may contact me through my [LinkedIn](https://ph.linkedin.com/in/ojigayatin) Account
